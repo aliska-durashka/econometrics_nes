@@ -1,0 +1,73 @@
+# симуляция «регрессии к среднему»
+# X и Y распределены одинаково (среднее mu, ст. откл. sigma), корреляция rho.
+# Проверяем три вывода из решения:
+#   (1) plim b1 = rho
+#   (2) прогноз равен X только при X = mu; при X > mu он меньше X, при X < mu больше
+#   (3) эффект статистический: разброс Y не меньше разброса X, а обратная регрессия тоже «стягивает» к среднему
+
+set.seed(1886)
+
+mu    <- 170            #средний рост
+sigma <- 7              #стандартное отклонение роста
+rho   <- 0.6            #корреляция роста родителей и детей
+
+# сген пары с одинаковым распределением и корреляцией rho
+make_data <- function(n) {
+    z1 <- rnorm(n)
+    z2 <- rnorm(n)
+    x  <- mu + sigma * z1
+    y  <- mu + sigma * (rho * z1 + sqrt(1 - rho^2) * z2)
+    data.frame(x = x, y = y)
+}
+
+
+# Оценка наклона приближается к rho при росте выборки
+sizes <- c(20, 100, 1000, 10000, 100000)
+b1 <- sapply(sizes, function(n) coef(lm(y ~ x, data = make_data(n)))[2])
+data.frame(n = sizes, b1 = round(b1, 3), rho = rho)
+
+
+# Где прогноз совпадает с X
+d <- make_data(10000)
+m <- lm(y ~ x, data = d)
+b <- coef(m)
+b
+
+x_star <- b[1] / (1 - b[2])     # точка, где прогноз равен X
+cat("Прогноз равен X при X =", round(x_star, 1), "; среднее mu =", mu, "\n")
+
+# Прогноз для нескольких X ниже и выше среднего
+check <- data.frame(x = c(150, 160, 170, 180, 190))
+check$prognoz <- round(predict(m, newdata = check), 1)
+check$prognoz_minus_x <- round(check$prognoz - check$x, 1)
+check
+
+
+# Разброс детей такой же, как у родителей
+round(c(sd_x = sd(d$x), sd_y = sd(d$y)), 2)
+
+# Обратная регрессия (X на Y) тоже даёт наклон около rho:
+# у высоких детей родители в среднем ниже
+coef(lm(x ~ y, data = d))[2]
+
+
+# График
+draw_galton <- function() {
+    s <- d[1:1000, ]                           # 1000 точек, чтобы не было каши
+    plot(s$x, s$y, pch = 16, col = "grey60", cex = 0.6,
+         xlab = "Рост родителя (X), см", ylab = "Рост ребёнка (Y), см",
+         main = "Регрессия к среднему")
+    abline(0, 1, lty = 2, lwd = 2)             # линия Y = X
+    abline(m, col = "red", lwd = 2)            # линия регрессии
+    abline(v = mu, h = mu, lty = 3)            # средние
+    legend("topleft",
+           legend = c("Наблюдения", "Линия Y = X", "Линия регрессии", "Среднее"),
+           pch = c(16, NA, NA, NA), lty = c(NA, 2, 1, 3), lwd = c(NA, 2, 2, 1),
+           col = c("grey60", "black", "red", "black"), bty = "n")
+}
+
+draw_galton()                                  # на экран
+
+png("galton_regression.png", width = 800, height = 600)
+draw_galton()                                  # в файл
+dev.off()
