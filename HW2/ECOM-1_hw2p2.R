@@ -4,7 +4,7 @@ library(stargazer)
 
 folder <- "/Users/alisavert/Econometrics_nes/HW2"
 
-# ЗАДАЧА 2. Результаты SAT
+# ЗАДАЧА 2.
 
 # 2 Загружаю данные
 gpa <- read.table(file.path(folder, "GPA2.txt"), header = TRUE)
@@ -12,7 +12,7 @@ gpa$female_black <- gpa$female * gpa$black
 cat("Загружено наблюдений:", nrow(gpa), "\n")
 
 
-# Считаю описательную статистику
+# описательная статистика
 stats_table <- function(data, vars, file) {
     d <- data[vars]
     tab <- data.frame(
@@ -31,8 +31,8 @@ vars <- c("sat", "hsize", "hsizesq", "female", "black", "female_black")
 print(stats_table(gpa, vars, file.path(folder, "hw2_stats.csv")))
 
 
-# Оцениваю основную модель и проверяю значимость
-# female * black включает и их взаимодействие.
+# Основная модель и проверка значимость
+
 m1 <- lm(sat ~ hsize + hsizesq + female * black, data = gpa)
 V1 <- vcovHC(m1, type = "HC0")
 print(coeftest(m1, vcov. = V1))
@@ -60,19 +60,19 @@ print(effect_table, digits = 4)
 # Проверяю, нужен ли квадрат размера выпуска
 print(coeftest(m1, vcov. = V1)["hsizesq", , drop = FALSE])
 
-# Наклон кривой при размере выпуска h равен a + 2*b2*h.
+# Наклон кривой при размере выпуска h
 a  <- unname(coef(m1)["hsize"])
 b2 <- unname(coef(m1)["hsizesq"])
 
 
-# Нахожу максимум и его 95%-й интервал дельта-методом
+# дельта метод
+
 h_max <- -a / (2 * b2)
 size_terms <- c("hsize", "hsizesq")
 V_size <- V1[size_terms, size_terms]
 gradient <- c(-1 / (2 * b2), a / (2 * b2^2))
 se_max <- sqrt(drop(t(gradient) %*% V_size %*% gradient))
 
-# hsize измеряется в сотнях человек, поэтому умножаю на 100.
 maximum <- 100 * c(
     Выпускников = h_max,
     Нижняя = h_max - qnorm(0.975) * se_max,
@@ -98,7 +98,7 @@ save_reg_table <- function(models, file) {
 
 save_reg_table(list(m1, m2, m3), file.path(folder, "hw2_models.html"))
 
-# Рисунок 2. Прогноз среднего SAT в зависимости от размера выпуска
+# Рисунок - прогноз среднего SAT в зависимости от размера выпуска
 
 h <- seq(min(gpa$hsize), max(gpa$hsize), length.out = 300)
 grid <- data.frame(hsize = h, hsizesq = h^2, female = 0, black = 0)
